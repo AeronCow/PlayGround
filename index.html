@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#080d0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Zone Morte — un petit jeu de tir 2D survival horror pensé pour téléphone et tablette.">
+  <title>ZONE MORTE — Survival 2D</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="app">
+    <canvas id="game" aria-label="Terrain de jeu Zone Morte"></canvas>
+    <div class="grain" aria-hidden="true"></div>
+
+    <section id="hud" class="hud hidden" aria-label="Interface de jeu">
+      <div class="hud-top">
+        <div class="hud-cluster">
+          <div class="wave-chip"><span class="dot"></span><span>VAGUE</span><b id="waveNum">01</b></div>
+          <div class="score-row"><span class="score-label">SCORE</span><b id="scoreNum">000000</b></div>
+          <div id="combo" class="combo hidden"><b id="comboMult">x2</b><span id="comboCount">4 COMBO</span><i id="comboBar"></i></div>
+        </div>
+        <div class="hud-actions">
+          <button id="soundBtn" class="icon-btn" type="button" aria-label="Couper le son" aria-pressed="false">
+            <span class="sound-on" aria-hidden="true">SON</span><span class="sound-off" aria-hidden="true">MUET</span>
+          </button>
+          <button id="pauseBtn" class="icon-btn pause-icon" type="button" aria-label="Pause">
+            <span></span><span></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="meters">
+          <div class="meter health-meter">
+            <div class="meter-head"><span>VITALITÉ</span><b id="hpText">100</b></div>
+            <div class="meter-track"><i id="hpFill" class="hp-fill"></i></div>
+          </div>
+          <div class="meter ammo-meter">
+            <div class="meter-head"><span id="ammoLabel">CHARGEUR</span><b id="ammoText">14 / 14</b></div>
+            <div class="meter-track"><i id="ammoFill" class="ammo-fill"></i><i id="reloadFill" class="reload-fill"></i></div>
+          </div>
+        </div>
+        <button id="reloadBtn" class="reload-btn" type="button" aria-label="Recharger">
+          <span class="reload-icon" aria-hidden="true"></span>
+          <span id="reloadText">RECHARGER</span>
+        </button>
+      </div>
+
+      <div id="waveBanner" class="wave-banner" aria-live="polite">
+        <span id="bannerKicker">SURVIE</span>
+        <b id="bannerTitle">VAGUE 01</b>
+        <em id="bannerSub"></em>
+      </div>
+      <div id="tiltBadge" class="tilt-badge hidden"><span></span>INCLINAISON · TIR AUTO</div>
+    </section>
+
+    <div id="moveStick" class="stick move-stick hidden" aria-hidden="true">
+      <div class="stick-face"><span class="stick-mark"></span></div>
+      <div class="stick-knob"></div>
+      <span class="stick-label">DÉPLACER</span>
+    </div>
+    <div id="aimStick" class="stick aim-stick hidden" aria-hidden="true">
+      <div class="stick-face"><span class="stick-mark"></span></div>
+      <div class="stick-knob"></div>
+      <span class="stick-label">VISER · TIRER</span>
+    </div>
+
+    <section id="menu" class="overlay menu" aria-label="Menu principal">
+      <div class="menu-scan" aria-hidden="true"></div>
+      <header class="menu-header">
+        <span class="build-tag">PROTOCOLE 07 · SURVIE</span>
+        <button id="menuSoundBtn" class="text-btn" type="button" aria-label="Couper le son" aria-pressed="false">SON ON</button>
+      </header>
+
+      <div class="menu-content">
+        <div class="logo-block">
+          <p class="logo-kicker"><span></span> ILS NE DORMENT JAMAIS <span></span></p>
+          <h1 class="logo">ZONE<span>MORTE</span></h1>
+          <p class="tagline">La nuit tombe. Tiens la ligne.</p>
+        </div>
+
+        <button id="startBtn" class="btn-primary" type="button" aria-label="Play">
+          <span class="btn-text">JOUER</span>
+          <span class="btn-sub">UNE VAGUE DE PLUS</span>
+        </button>
+
+        <div class="menu-options">
+          <button id="motionBtn" class="chip" type="button" aria-pressed="false">
+            <span class="chip-dot"></span><span id="motionLabel">INCLINAISON : OFF</span>
+          </button>
+          <button id="calibrateBtn" class="chip chip-ghost hidden" type="button">CALIBRER</button>
+        </div>
+        <p id="motionHint" class="motion-hint">Optionnel — inclinez l'appareil pour viser, le tir devient automatique.</p>
+
+        <div class="controls-grid">
+          <div class="control-card">
+            <div class="stick-glyph" aria-hidden="true"><i></i></div>
+            <div><b>SE DÉPLACER</b><span>Joystick gauche</span></div>
+          </div>
+          <div class="control-card">
+            <div class="cross-glyph" aria-hidden="true"><i></i></div>
+            <div><b>VISER &amp; TIRER</b><span>Joystick droit</span></div>
+          </div>
+          <div id="desktopHint" class="control-card wide">
+            <div class="key-glyph" aria-hidden="true">ZQSD</div>
+            <div><b>CLAVIER + SOURIS</b><span>ZQSD / flèches · clic pour tirer · R recharger</span></div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="menu-footer">
+        <div class="best-score"><span>MEILLEUR SCORE</span><b id="bestScore">000000</b></div>
+        <p>Un jeu de tir 2D pour téléphone &amp; tablette.</p>
+      </footer>
+    </section>
+
+    <section id="pause" class="overlay modal hidden" aria-label="Pause">
+      <div class="modal-card">
+        <p class="modal-kicker">RESPIRATION</p>
+        <h2>PAUSE</h2>
+        <p class="modal-copy">La horde attend. Pas longtemps.</p>
+        <button id="resumeBtn" class="btn-primary compact" type="button" aria-label="Resume"><span class="btn-text">REPRENDRE</span></button>
+        <div class="modal-row">
+          <button id="pauseRestartBtn" class="btn-secondary" type="button">RECOMMENCER</button>
+          <button id="pauseMenuBtn" class="btn-secondary" type="button">MENU</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameover" class="overlay modal hidden" aria-label="Partie terminée">
+      <div class="modal-card death-card">
+        <p class="modal-kicker">SIGNAL PERDU</p>
+        <h2 class="death-title">VOUS ÊTES<br><span>MORT</span></h2>
+        <p id="deathLine" class="modal-copy">La nuit a eu le dernier mot.</p>
+        <div class="result-grid">
+          <div><span>SCORE</span><b id="finalScore">0</b></div>
+          <div><span>VAGUE</span><b id="finalWave">0</b></div>
+          <div><span>ÉLIMINATIONS</span><b id="finalKills">0</b></div>
+        </div>
+        <p id="newBest" class="new-best hidden">NOUVEAU RECORD</p>
+        <button id="restartBtn" class="btn-primary compact" type="button" aria-label="Play again"><span class="btn-text">REJOUER</span></button>
+        <button id="backMenuBtn" class="text-link" type="button">RETOUR AU MENU</button>
+      </div>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <noscript>Ce jeu nécessite JavaScript.</noscript>
+  <script type="module" src="game.js"></script>
+</body>
+</html>
