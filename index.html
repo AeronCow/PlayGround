@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#12100b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Aldermoor — A Medieval Voxel Adventure</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" aria-label="Aldermoor game world"></canvas>
+    <div id="vignette"></div>
+    <div id="dawn-glow"></div>
+    <div id="damage-flash"></div>
+
+    <div id="hud" class="hidden" aria-live="polite">
+      <div id="compass-wrap">
+        <canvas id="compass" width="640" height="80"></canvas>
+        <div id="compass-needle"></div>
+      </div>
+
+      <aside id="quest-card" class="leather-panel">
+        <div class="quest-kicker"><span class="rune">✦</span> QUEST</div>
+        <div id="quest-title">A Village in Need</div>
+        <div id="quest-objective">Speak with Elder Rowan</div>
+        <div class="quest-progress"><i id="quest-bar"></i></div>
+      </aside>
+
+      <div id="top-actions">
+        <button id="btn-journal" class="icon-btn" aria-label="Journal">
+          <svg viewBox="0 0 24 24"><use href="#i-book"/></svg>
+        </button>
+        <button id="btn-pause" class="icon-btn" aria-label="Menu">
+          <svg viewBox="0 0 24 24"><use href="#i-gear"/></svg>
+        </button>
+      </div>
+
+      <div id="crosshair">
+        <span class="dot"></span>
+        <div id="break-ring"></div>
+      </div>
+
+      <div id="target-label"></div>
+
+      <div id="interact-prompt" class="hidden">
+        <button id="btn-interact-pill">
+          <span class="keycap">E</span>
+          <span id="interact-text">Interact</span>
+        </button>
+      </div>
+
+      <div id="health-wrap">
+        <div id="health-hearts"></div>
+        <div id="health-text">100</div>
+      </div>
+
+      <div id="hotbar" role="toolbar" aria-label="Building blocks"></div>
+      <div id="selected-name"></div>
+
+      <div id="joystick" class="touch-only">
+        <div id="joystick-base"><div id="joystick-knob"></div></div>
+      </div>
+
+      <div id="action-cluster" class="touch-only">
+        <button id="btn-jump" class="action-btn small" aria-label="Jump">
+          <svg viewBox="0 0 24 24"><use href="#i-up"/></svg>
+        </button>
+        <button id="btn-place" class="action-btn small" aria-label="Place block">
+          <svg viewBox="0 0 24 24"><use href="#i-cube"/></svg>
+        </button>
+        <button id="btn-interact" class="action-btn small hidden" aria-label="Interact">
+          <svg viewBox="0 0 24 24"><use href="#i-hand"/></svg>
+        </button>
+        <button id="btn-mine" class="action-btn big" aria-label="Mine or attack">
+          <svg viewBox="0 0 24 24"><use href="#i-pick"/></svg>
+        </button>
+      </div>
+
+      <div id="tilt-badge" class="hidden">TILT ACTIVE</div>
+      <div id="toast-stack"></div>
+      <div id="hint-strip">Drag to look · Joystick to move · Hold ⛏ to mine</div>
+    </div>
+
+    <section id="loading" class="screen">
+      <div class="loading-inner">
+        <div class="crest small-crest">
+          <svg viewBox="0 0 120 140" aria-hidden="true">
+            <path d="M60 4 110 24v46c0 30-21 52-50 66C31 122 10 100 10 70V24Z" fill="#1c1710" stroke="#c9a24b" stroke-width="3"/>
+            <path d="M60 16 99 32v37c0 24-16 42-39 54-23-12-39-30-39-54V32Z" fill="none" stroke="#8d6d33" stroke-width="1.5"/>
+            <path d="M60 44v40M42 64h36" stroke="#d8b45e" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="60" cy="64" r="9" fill="none" stroke="#d8b45e" stroke-width="3"/>
+          </svg>
+        </div>
+        <h1 class="logo">ALDERMOOR</h1>
+        <p class="tagline">A MEDIEVAL VOXEL ADVENTURE</p>
+        <div class="load-track"><i id="load-bar"></i></div>
+        <p id="load-status">Forging the realm…</p>
+      </div>
+    </section>
+
+    <section id="title" class="screen hidden">
+      <div class="title-shade"></div>
+      <div class="title-frame">
+        <div class="title-top">
+          <div class="crest">
+            <svg viewBox="0 0 120 140" aria-hidden="true">
+              <path d="M60 4 110 24v46c0 30-21 52-50 66C31 122 10 100 10 70V24Z" fill="#17130d" stroke="#d8b45e" stroke-width="3"/>
+              <path d="M60 16 99 32v37c0 24-16 42-39 54-23-12-39-30-39-54V32Z" fill="none" stroke="#9b7a3b" stroke-width="1.5"/>
+              <path d="M60 44v40M42 64h36" stroke="#e3c477" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="60" cy="64" r="9" fill="none" stroke="#e3c477" stroke-width="3"/>
+            </svg>
+          </div>
+          <h1 class="logo">ALDERMOOR</h1>
+          <p class="tagline">A MEDIEVAL VOXEL ADVENTURE</p>
+          <div class="gold-rule"><span>❖</span></div>
+          <p class="pitch">The Crown of Aldermoor lies shattered.<br/>Explore villages, castles and forgotten ruins.<br/>Mine, build, fight — and restore the realm.</p>
+        </div>
+        <div class="title-actions">
+          <button id="btn-start" class="btn primary">Start</button>
+          <button id="btn-continue" class="btn ghost" disabled>Continue</button>
+          <button id="btn-howto" class="btn ghost">How to Play</button>
+        </div>
+        <div class="title-foot">
+          <span class="pill">Touch controls</span>
+          <span class="pill">Optional tilt</span>
+          <span class="pill">Plays offline</span>
+        </div>
+        <div class="version">ALDERMOOR · CHAPTER I</div>
+      </div>
+    </section>
+
+    <section id="pause" class="screen hidden">
+      <div class="modal parchment">
+        <button class="close-x" id="btn-pause-close" aria-label="Resume">×</button>
+        <div class="modal-head">
+          <div class="modal-kicker">THE REALM AWAITS</div>
+          <h2>Paused</h2>
+          <div class="gold-rule small"><span>❖</span></div>
+        </div>
+        <div class="pause-body">
+          <div class="pause-actions">
+            <button id="btn-resume" class="btn primary wide">Resume</button>
+            <button id="btn-journal-2" class="btn ghost wide">Journal &amp; Quests</button>
+            <button id="btn-save-quit" class="btn ghost wide">Save &amp; Return to Title</button>
+          </div>
+          <div class="settings">
+            <h3>Settings</h3>
+            <label class="switch-row">
+              <span><b>Tilt to Look</b><small>Use device motion (iOS asks permission)</small></span>
+              <input type="checkbox" id="set-tilt" />
+              <i class="switch"></i>
+            </label>
+            <label class="switch-row">
+              <span><b>Invert Look Y</b><small>For touch drag and tilt</small></span>
+              <input type="checkbox" id="set-invert" />
+              <i class="switch"></i>
+            </label>
+            <label class="switch-row">
+              <span><b>Sound</b><small>Ambience, music and effects</small></span>
+              <input type="checkbox" id="set-sound" checked />
+              <i class="switch"></i>
+            </label>
+            <label class="range-row">
+              <span><b>Look Sensitivity</b></span>
+              <input type="range" id="set-sens" min="40" max="180" value="100" />
+            </label>
+            <label class="range-row">
+              <span><b>Render Quality</b></span>
+              <select id="set-quality">
+                <option value="auto">Auto</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </label>
+            <div id="tilt-status" class="settings-note">Tilt is off.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="journal" class="screen hidden">
+      <div class="modal parchment journal-modal">
+        <button class="close-x" id="btn-journal-close" aria-label="Close">×</button>
+        <div class="modal-head">
+          <div class="modal-kicker">THE ADVENTURER'S LEDGER</div>
+          <h2>Journal</h2>
+          <div class="gold-rule small"><span>❖</span></div>
+        </div>
+        <div class="journal-grid">
+          <div class="journal-col">
+            <h3>Quest</h3>
+            <div id="journal-quest" class="journal-quest"></div>
+            <h3>Chronicle</h3>
+            <ul id="journal-log" class="journal-log"></ul>
+          </div>
+          <div class="journal-col">
+            <h3>Satchel</h3>
+            <div id="journal-inventory" class="inv-grid"></div>
+            <h3>Controls</h3>
+            <div id="journal-controls" class="control-list"></div>
+          </div>
+        </div>
+        <div class="journal-stats" id="journal-stats"></div>
+      </div>
+    </section>
+
+    <section id="dialogue" class="screen hidden">
+      <div class="dialogue-wrap">
+        <div class="portrait" id="dlg-portrait"></div>
+        <div class="dialogue-card parchment">
+          <div class="dlg-name" id="dlg-name">Elder Rowan</div>
+          <p class="dlg-text" id="dlg-text"></p>
+          <div class="dlg-actions">
+            <span class="dlg-hint">Tap to continue</span>
+            <button id="btn-dlg-next" class="btn primary small-btn">Continue</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="death" class="screen hidden">
+      <div class="modal dark-modal">
+        <div class="death-mark">☠</div>
+        <h2>You Have Fallen</h2>
+        <p>The realm is not finished with you yet.</p>
+        <button id="btn-respawn" class="btn primary">Rise Again</button>
+        <p class="death-note">You will return to the village green.</p>
+      </div>
+    </section>
+
+    <section id="victory" class="screen hidden">
+      <div class="modal parchment victory-modal">
+        <div class="victory-crown">♛</div>
+        <div class="modal-kicker">THE CROWN IS MADE WHOLE</div>
+        <h2>Aldermoor Restored</h2>
+        <div class="gold-rule small"><span>❖</span></div>
+        <p class="victory-text">The three shards sing as one. Light returns to the keep,<br/>and the bells of Aldermoor ring across the valley once more.</p>
+        <div id="victory-stats" class="victory-stats"></div>
+        <div class="victory-actions">
+          <button id="btn-keep-exploring" class="btn primary">Keep Exploring</button>
+          <button id="btn-victory-title" class="btn ghost">Return to Title</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="howto" class="screen hidden">
+      <div class="modal parchment">
+        <button class="close-x" id="btn-howto-close" aria-label="Close">×</button>
+        <div class="modal-head">
+          <div class="modal-kicker">FIELD MANUAL</div>
+          <h2>How to Play</h2>
+          <div class="gold-rule small"><span>❖</span></div>
+        </div>
+        <div class="howto-grid">
+          <div><h3>Touch</h3><p>Left thumb moves. Drag the right side to look. Hold the pickaxe to mine or strike. The cube places the selected block. Jump and interact buttons appear where needed.</p></div>
+          <div><h3>Desktop</h3><p><b>WASD</b> move · <b>Mouse</b> look · <b>Left click</b> mine · <b>Right click</b> place · <b>Space</b> jump · <b>E</b> interact · <b>1–6</b> blocks · <b>Tab</b> journal.</p></div>
+          <div><h3>Tilt</h3><p>Open the menu and enable <b>Tilt to Look</b>. On iPhone and iPad, iOS will ask for motion access — allow it, then tilt the device gently. Recenter by toggling it off and on.</p></div>
+          <div><h3>Adventure</h3><p>Follow the gold compass markers. Gather wood and stone, recover the three Crown Shards, and return them to Elder Rowan. Beware the brigands and the Black Knight.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <div id="rotate-hint" class="hidden"><span>↻</span> Rotate for a wider view</div>
+    <div id="fade"></div>
+  </div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-pick" viewBox="0 0 24 24"><path d="M4 20 14.2 9.8M13.2 4.2c2.4-.9 5.1-.2 6.8 1.5.5.5.4 1.2-.2 1.4l-4 1.4-1.3 3.9c-.2.6-.9.8-1.3.3-1.7-1.7-2.3-4.4-1.4-6.8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><path d="m4.4 18.3-1 2.3 2.3-1 1.4-1.4-1.3-1.3Z" fill="currentColor"/></symbol>
+      <symbol id="i-cube" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="m5 14 7-7 7 7M12 7v13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11m0-6.5a1.5 1.5 0 0 1 3 0V11m0-5.5a1.5 1.5 0 0 1 3 0V12m0-4.5a1.5 1.5 0 0 1 3 0V15c0 4-2.5 6-6 6h-1.5c-2 0-3.2-1-4.2-2.6L5 13.5c-.7-1.2.8-2.6 2-1.8L9 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 11h6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Zm8 3.8-2.1-.6-.7-1.7 1.1-1.9-2.1-2.1-1.9 1.1-1.7-.7L12.6 4h-1.2l-.6 2.1-1.7.7-1.9-1.1-2.1 2.1 1.1 1.9-.7 1.7L3.4 12v1.2l2.1.6.7 1.7-1.1 1.9 2.1 2.1 1.9-1.1 1.7.7.6 2.1h1.2l.6-2.1 1.7-.7 1.9 1.1 2.1-2.1-1.1-1.9.7-1.7 2.1-.6Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+    </defs>
+  </svg>
+
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js" } }
+  </script>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
