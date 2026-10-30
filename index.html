@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#04090d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Hollow Warden — a single-arena gothic boss duel built for touch, tilt, and keyboard.">
+  <title>Hollow Warden — A Single-Arena Duel</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="app">
+    <canvas id="game" role="img" aria-label="A pale knight faces an enormous horned warden in a ruined underground chapel."></canvas>
+
+    <div id="hud" class="hud is-hidden" aria-live="off">
+      <section class="player-hud" aria-label="Knight status">
+        <div id="masks" class="masks"></div>
+        <div class="soul-wrap">
+          <div class="soul-orb" aria-hidden="true">
+            <div id="soul-fill" class="soul-fill"></div>
+            <div class="soul-shine"></div>
+            <span class="soul-glyph">◇</span>
+          </div>
+          <div class="soul-meta">
+            <span class="soul-label">SOUL</span>
+            <span id="soul-count" class="soul-count">0</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="boss-hud" aria-label="Boss status">
+        <div class="boss-heading">
+          <span class="boss-rule"></span>
+          <h2 class="boss-name">THE HOLLOW WARDEN</h2>
+          <span class="boss-rule"></span>
+        </div>
+        <div class="boss-bar">
+          <div id="boss-lag" class="boss-lag"></div>
+          <div id="boss-fill" class="boss-fill"></div>
+          <div class="boss-notches"></div>
+          <div class="boss-cap boss-cap-l"></div>
+          <div class="boss-cap boss-cap-r"></div>
+        </div>
+        <div class="boss-sub">
+          <span id="boss-phase">KEEPER OF THE DROWNED CHAPEL</span>
+          <span id="boss-hp-text">32</span>
+        </div>
+      </section>
+
+      <div class="top-actions">
+        <button id="btn-sound" class="icon-button" type="button" aria-label="Toggle sound" title="Sound">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 8.5c1.6 1.9 1.6 5.1 0 7M19.5 6c3 3.4 3 8.6 0 12"/></svg>
+        </button>
+        <button id="btn-pause" class="icon-button" type="button" aria-label="Pause game" title="Pause">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+        </button>
+      </div>
+
+      <div id="boss-banner" class="boss-banner" aria-hidden="true">
+        <span class="banner-kicker">THE CHAPEL STIRS</span>
+        <strong>THE HOLLOW WARDEN</strong>
+        <span class="banner-sub">Keeper of the Drowned Chapel</span>
+      </div>
+
+      <div id="toast" class="toast" role="status"></div>
+
+      <div id="touch-ui" class="touch-ui" aria-hidden="true">
+        <div id="stick-zone" class="stick-zone">
+          <div class="stick-base">
+            <div class="stick-runes"></div>
+            <div id="stick-knob" class="stick-knob"><i></i></div>
+          </div>
+          <span class="stick-hint">MOVE</span>
+        </div>
+
+        <div class="action-cluster">
+          <button class="touch-button tb-jump" type="button" data-action="jump" aria-label="Jump">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 13l6-7 6 7M12 6v13"/></svg>
+            <span>JUMP</span>
+          </button>
+          <button class="touch-button tb-focus" type="button" data-action="focus" aria-label="Focus soul to heal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l5 9-5 9-5-9zM12 7v10"/></svg>
+            <span>FOCUS</span>
+          </button>
+          <button class="touch-button tb-dash" type="button" data-action="dash" aria-label="Dash">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l6 5-6 5M11 7l6 5-6 5M18 7l3 5-3 5"/></svg>
+            <span>DASH</span>
+          </button>
+          <button class="touch-button tb-attack" type="button" data-action="attack" aria-label="Slash nail">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19C9 5 16 3 21 3c-1 6-4 13-17 16zM6 16l3 3"/></svg>
+            <span>SLASH</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="hint" class="hint">
+        <span class="hint-key">JOYSTICK</span> move
+        <span class="hint-dot"></span>
+        <span class="hint-key">SLASH</span> strike
+        <span class="hint-dot"></span>
+        <span class="hint-key">TILT</span> optional
+      </div>
+    </div>
+
+    <section id="menu" class="screen menu-screen">
+      <header class="menu-top">
+        <span class="sigil" aria-hidden="true">
+          <svg viewBox="0 0 60 60"><path d="M30 3c4 10 10 14 21 16-9 4-14 9-17 20-2-8-7-13-16-17 7-2 10-8 12-19zM30 39v18M18 51h24"/></svg>
+        </span>
+        <span class="menu-eyebrow">A SINGLE-ARENA DUEL</span>
+      </header>
+
+      <div class="menu-main">
+        <p class="kicker">BENEATH THE DROWNED CHAPEL</p>
+        <h1 class="title">
+          <span class="title-the">THE</span>
+          <span class="title-line">HOLLOW</span>
+          <span class="title-line title-line-2">WARDEN</span>
+        </h1>
+        <div class="title-flourish" aria-hidden="true"><i></i><b>✦</b><i></i></div>
+        <p class="lede">The last warden keeps its vigil over a kingdom already lost. Break the mask. Claim the dark.</p>
+
+        <div class="menu-actions">
+          <button id="btn-start" class="button button-primary" type="button">
+            <span>Start Game</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+          </button>
+          <button id="btn-tilt" class="button button-ghost" type="button" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M3 9c-.8 2-.8 4 0 6M21 9c.8 2 .8 4 0 6"/></svg>
+            <span>Tilt Controls: Off</span>
+          </button>
+          <button id="btn-menu-sound" class="button button-ghost" type="button" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 8.5c1.6 1.9 1.6 5.1 0 7"/></svg>
+            <span>Sound: On</span>
+          </button>
+        </div>
+
+        <div class="control-legend" aria-label="Controls">
+          <div class="legend-block legend-touch">
+            <span class="legend-title">TOUCH</span>
+            <span><b>Joystick</b> move</span>
+            <span><b>Slash</b> strike / deflect</span>
+            <span><b>Jump</b> ×2 in air</span>
+            <span><b>Dash</b> pass through harm</span>
+            <span><b>Focus</b> hold to heal</span>
+          </div>
+          <div class="legend-block legend-keys">
+            <span class="legend-title">KEYBOARD</span>
+            <span><b>A D</b> / <b>← →</b> move</span>
+            <span><b>J</b> / <b>Z</b> slash</span>
+            <span><b>Space</b> jump</span>
+            <span><b>K</b> / <b>Shift</b> dash</span>
+            <span><b>L</b> / <b>F</b> hold to focus</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="menu-foot">
+        <span>Tilt is optional. Motion permission is requested only when you enable it.</span>
+        <span class="foot-mark">✦</span>
+        <span>Headphones recommended</span>
+      </footer>
+    </section>
+
+    <section id="pause-screen" class="screen pause-screen is-hidden">
+      <div class="pause-panel">
+        <p class="kicker">THE DARK HOLDS ITS BREATH</p>
+        <h2 class="screen-title">PAUSED</h2>
+        <div class="title-flourish" aria-hidden="true"><i></i><b>✦</b><i></i></div>
+        <div class="pause-actions">
+          <button id="btn-resume" class="button button-primary" type="button"><span>Resume</span></button>
+          <button id="btn-pause-tilt" class="button button-ghost" type="button" aria-pressed="false">
+            <span>Tilt Controls: Off</span>
+          </button>
+          <button id="btn-pause-sound" class="button button-ghost" type="button" aria-pressed="true">
+            <span>Sound: On</span>
+          </button>
+          <button id="btn-pause-restart" class="button button-ghost button-danger" type="button"><span>Restart Duel</span></button>
+          <button id="btn-pause-menu" class="button button-ghost" type="button"><span>Return to Menu</span></button>
+        </div>
+        <p class="pause-tip">Hold <b>Focus</b> while standing still to trade soul for a mask.</p>
+      </div>
+    </section>
+
+    <section id="end-screen" class="screen end-screen is-hidden">
+      <div class="end-panel">
+        <p id="end-kicker" class="kicker">THE CHAPEL FALLS SILENT</p>
+        <h2 id="end-title" class="screen-title">THE WARDEN FALLS</h2>
+        <div class="title-flourish" aria-hidden="true"><i></i><b>✦</b><i></i></div>
+        <p id="end-copy" class="end-copy"></p>
+        <div class="end-stats">
+          <div><span>TIME</span><strong id="stat-time">0:00</strong></div>
+          <div><span>MASKS LOST</span><strong id="stat-hits">0</strong></div>
+          <div><span>WARDEN</span><strong id="stat-boss">32 / 32</strong></div>
+        </div>
+        <div class="end-actions">
+          <button id="btn-again" class="button button-primary" type="button"><span>Duel Again</span></button>
+          <button id="btn-end-menu" class="button button-ghost" type="button"><span>Return to Menu</span></button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
