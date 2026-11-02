@@ -786,7 +786,6 @@ function resize() {
   ui.desktopHint.classList.toggle("hidden", isTouchMode);
   buildScreenSprites();
   clampCamera();
-  menuDirty = true;
 }
 
 function buildScreenSprites() {
@@ -969,7 +968,6 @@ function backToMenu() {
   ui.menu.classList.remove("hidden");
   ui.moveStick.classList.add("hidden");
   ui.aimStick.classList.add("hidden");
-  menuDirty = true;
   initAttract();
   updateBestUI();
   updateMotionUI();
@@ -2319,7 +2317,6 @@ function toast(message) {
 /* ----------------------------------------------------------------------- */
 
 let lastFrame = performance.now();
-let menuDirty = true;
 
 function update(dt) {
   game.time += dt;
@@ -2362,11 +2359,6 @@ function update(dt) {
 function frame(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000);
   lastFrame = now;
-  if (game.mode === "menu") {
-    menuDirty = false;
-    requestAnimationFrame(frame);
-    return;
-  }
   if (game.mode !== "paused") update(dt);
   render();
   requestAnimationFrame(frame);
