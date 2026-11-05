@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#080b0c" />
+  <meta name="description" content="IRON DAWN — a cinematic run-and-gun platformer. Play as Sgt. Jack 'Reaper' Cole and fight through five occupied sectors." />
+  <title>IRON DAWN — Operation Blackout</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b1012'/%3E%3Cpath d='M32 8l6 15 16 2-12 11 4 17-14-8-14 8 4-17-12-11 16-2z' fill='%23dfae5d'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" aria-label="IRON DAWN game world"></canvas>
+    <div class="screen-fx" aria-hidden="true">
+      <div class="fx-grain"></div>
+      <div class="fx-vignette"></div>
+      <div class="fx-scanlines"></div>
+      <div id="damageFlash" class="damage-flash"></div>
+    </div>
+
+    <!-- ============================ MENU ============================ -->
+    <section id="menu" class="menu screen">
+      <div class="menu-shade"></div>
+      <header class="menu-topbar">
+        <div class="brand-lockup">
+          <span class="brand-star">★</span>
+          <span>FIELD OPS<span class="brand-slash">//</span>INTERACTIVE</span>
+        </div>
+        <div class="build-tag">OPERATION BUILD <b>26.11</b> <span class="live-dot"></span></div>
+      </header>
+
+      <main class="menu-layout">
+        <section class="hero-panel">
+          <div class="eyebrow"><span></span> A CINEMATIC RUN &amp; GUN PLATFORMER</div>
+          <h1 class="logo" aria-label="Iron Dawn">
+            <span class="logo-iron">IRON</span>
+            <span class="logo-dawn">DAWN</span>
+            <span class="logo-rule"></span>
+          </h1>
+          <p class="tagline">Five sectors. One soldier.<br /><em>No rules of engagement.</em></p>
+          <p class="brief">
+            Sgt. Jack <b>“Reaper”</b> Cole is the last American operative behind enemy lines.
+            Shoot, slash and blast your way through the occupied city — and take back the dawn.
+          </p>
+
+          <div class="hero-actions">
+            <button id="playBtn" class="play-btn" type="button" aria-label="Play">
+              <span class="play-icon">▶</span>
+              <span class="play-copy"><b>PLAY</b><small>DEPLOY TO SECTOR 01</small></span>
+              <span class="play-sweep"></span>
+            </button>
+            <div class="best-score">
+              <span>BEST SCORE</span>
+              <strong id="bestScore">000000</strong>
+            </div>
+          </div>
+
+          <div class="feature-chips" aria-label="Game features">
+            <span><b>05</b> SECTORS</span>
+            <span><b>05</b> WEAPONS</span>
+            <span><b>∞</b> BAD GUYS</span>
+          </div>
+        </section>
+
+        <aside class="dossier">
+          <div class="dossier-head">
+            <span class="dossier-kicker">MISSION DOSSIER</span>
+            <span class="stamp">CLASSIFIED</span>
+          </div>
+          <div class="dossier-title">OPERATION<br /><b>IRON DAWN</b></div>
+          <div class="dossier-map" aria-hidden="true">
+            <div class="map-grid"></div>
+            <div class="map-route"></div>
+            <span class="map-node n1">01</span>
+            <span class="map-node n2">02</span>
+            <span class="map-node n3">03</span>
+            <span class="map-node n4">04</span>
+            <span class="map-node n5">05</span>
+            <span class="map-label l1">ASHFALL</span>
+            <span class="map-label l5">IRON DAWN</span>
+          </div>
+          <div class="loadout">
+            <div class="loadout-row"><span class="loadout-key">START</span><span class="loadout-name">M1911 <small>PISTOL</small></span><span class="loadout-tag">SIDEARM</span></div>
+            <div class="loadout-row"><span class="loadout-key">MELEE</span><span class="loadout-name">KA-BAR <small>KNIFE</small></span><span class="loadout-tag">SILENT</span></div>
+            <div class="loadout-row"><span class="loadout-key">LOOT</span><span class="loadout-name">CRATES <small>&amp; BARRELS</small></span><span class="loadout-tag">SUPPLY</span></div>
+          </div>
+          <div class="dossier-note">Enemy supply caches contain ammunition, grenades and field medicine. Barrels are explosive. Use them.</div>
+        </aside>
+      </main>
+
+      <footer class="menu-footer">
+        <div class="controls-strip">
+          <span class="controls-label">CONTROLS</span>
+          <span><kbd>A</kbd><kbd>D</kbd> MOVE</span>
+          <span><kbd>SPACE</kbd> JUMP</span>
+          <span><kbd>MOUSE</kbd> AIM / FIRE</span>
+          <span><kbd>F</kbd> KNIFE</span>
+          <span><kbd>G</kbd> GRENADE</span>
+          <span><kbd>R</kbd> RELOAD</span>
+          <span><kbd>SHIFT</kbd> COMBAT ROLL</span>
+        </div>
+        <div class="footer-note">KEYBOARD + MOUSE RECOMMENDED <span>•</span> HEADPHONES ON</div>
+      </footer>
+    </section>
+
+    <!-- ============================ HUD ============================ -->
+    <section id="hud" class="hud is-hidden" aria-live="polite">
+      <div class="hud-top">
+        <div class="operator-card">
+          <div class="portrait" aria-hidden="true">
+            <span class="portrait-star">★</span>
+            <span class="portrait-rank">SGT</span>
+          </div>
+          <div class="operator-info">
+            <div class="operator-name">SGT. J. COLE <span>“REAPER”</span></div>
+            <div class="health-row">
+              <div class="health-bar"><div id="healthFill" class="health-fill"></div><div id="armorFill" class="armor-fill"></div></div>
+              <div id="healthText" class="health-text">100</div>
+            </div>
+            <div class="status-row"><span id="armorText">ARMOR 00</span><span class="status-sep">/</span><span id="stanceText">COMBAT READY</span></div>
+          </div>
+        </div>
+
+        <div class="mission-card">
+          <div class="mission-line"><span id="missionNumber">MISSION 01</span><span class="mission-divider">//</span><span id="missionName">ASHFALL</span></div>
+          <div class="objective-line"><span class="objective-diamond"></span><span id="objectiveText">REACH THE EXTRACTION POINT</span><span id="missionProgress" class="mission-progress">0%</span></div>
+          <div class="objective-track"><div id="objectiveFill" class="objective-fill"></div><span id="objectiveMarker" class="objective-marker"></span></div>
+        </div>
+
+        <div class="hud-stats">
+          <div class="score-block">
+            <span>SCORE</span>
+            <strong id="scoreText">000000</strong>
+          </div>
+          <div class="kills-block">
+            <span>KILLS</span>
+            <strong id="killsText">0</strong>
+          </div>
+          <div class="hud-buttons">
+            <button id="muteBtn" class="icon-btn" type="button" aria-label="Mute audio" title="Mute (M)">♪</button>
+            <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pause game" title="Pause (Esc)">Ⅱ</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="killFeed" class="kill-feed" aria-hidden="true"></div>
+      <div id="comboBadge" class="combo-badge is-hidden"><span>COMBO</span><b id="comboText">x2</b></div>
+      <div id="toast" class="toast is-hidden"><span id="toastKicker">SUPPLY ACQUIRED</span><b id="toastText">AMMUNITION</b></div>
+      <div id="prompt" class="prompt is-hidden"><kbd>F</kbd><span id="promptText">KNIFE</span></div>
+
+      <div class="boss-wrap is-hidden" id="bossWrap">
+        <div class="boss-head"><span id="bossName">COLONEL VOLKOV</span><b id="bossTitle">THE IRON WALL</b></div>
+        <div class="boss-track"><div id="bossFill" class="boss-fill"></div></div>
+        <div class="boss-sub">ELIMINATE TARGET</div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="field-tips">
+          <span class="tip-label">FIELD TIP</span>
+          <span id="fieldTip">Shoot the red barrels. The blast does the rest.</span>
+        </div>
+
+        <div class="weapon-card">
+          <div class="weapon-topline">
+            <span id="weaponClass">SIDEARM</span>
+            <span id="weaponSlot">SLOT 1</span>
+          </div>
+          <div class="weapon-main">
+            <div class="weapon-icon" id="weaponIcon" aria-hidden="true">
+              <span class="gun-body"></span><span class="gun-slide"></span><span class="gun-grip"></span>
+            </div>
+            <div class="weapon-text">
+              <strong id="weaponName">M1911</strong>
+              <span id="weaponFlavor">Reliable. Deadly.</span>
+            </div>
+            <div class="ammo-block">
+              <span id="ammoMag">12</span><span class="ammo-sep">/</span><span id="ammoReserve">72</span>
+            </div>
+          </div>
+          <div class="weapon-bottomline">
+            <div id="weaponSlots" class="weapon-slots"></div>
+            <div class="grenade-count"><span class="grenade-icon" aria-hidden="true"></span><b id="grenadeText">3</b> <span>GRENADES</span></div>
+          </div>
+          <div class="reload-track is-hidden" id="reloadTrack"><div id="reloadFill"></div></div>
+        </div>
+      </div>
+
+      <div class="low-health" id="lowHealth" aria-hidden="true"><span>CRITICAL</span></div>
+    </section>
+
+    <!-- ============================ OVERLAYS ============================ -->
+    <section id="pauseScreen" class="overlay is-hidden">
+      <div class="overlay-panel pause-panel">
+        <div class="panel-kicker">TACTICAL PAUSE</div>
+        <h2>MISSION <span>ON HOLD</span></h2>
+        <p>The sector will wait. Your trigger discipline will not.</p>
+        <div class="pause-grid">
+          <button id="resumeBtn" class="action-btn primary" type="button">RESUME</button>
+          <button id="restartBtn" class="action-btn" type="button">RESTART SECTOR</button>
+          <button id="quitBtn" class="action-btn ghost" type="button">ABORT TO TITLE</button>
+        </div>
+        <div class="pause-controls">
+          <span><kbd>ESC</kbd> RESUME</span>
+          <span><kbd>M</kbd> MUTE</span>
+          <span><kbd>P</kbd> PAUSE</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="clearScreen" class="overlay is-hidden">
+      <div class="overlay-panel clear-panel">
+        <div class="panel-kicker" id="clearKicker">SECTOR CLEARED</div>
+        <h2 id="clearTitle">MISSION<br /><span>COMPLETE</span></h2>
+        <div class="clear-stats">
+          <div><span>SCORE</span><b id="clearScore">000000</b></div>
+          <div><span>KILLS</span><b id="clearKills">00</b></div>
+          <div><span>TIME</span><b id="clearTime">00:00</b></div>
+          <div><span>SUPPLY</span><b id="clearSupply">00</b></div>
+        </div>
+        <div id="unlockCard" class="unlock-card">
+          <div class="unlock-flare"></div>
+          <span class="unlock-kicker">ARSENAL EXPANDED</span>
+          <div class="unlock-name"><span id="unlockSlot">SLOT 02</span><b id="unlockName">MP5</b></div>
+          <span id="unlockDesc" class="unlock-desc">High rate of fire. Close-quarters dominance.</span>
+        </div>
+        <button id="nextBtn" class="action-btn primary wide" type="button">CONTINUE OPERATION <span>→</span></button>
+      </div>
+    </section>
+
+    <section id="deathScreen" class="overlay is-hidden">
+      <div class="overlay-panel death-panel">
+        <div class="death-stripe"></div>
+        <div class="panel-kicker">SIGNAL LOST</div>
+        <h2>SOLDIER <span>DOWN</span></h2>
+        <p id="deathText">You gave them hell. Not enough of it.</p>
+        <div class="death-stats"><span>SCORE <b id="deathScore">0</b></span><span>KILLS <b id="deathKills">0</b></span></div>
+        <div class="pause-grid">
+          <button id="retryBtn" class="action-btn primary" type="button">RETRY SECTOR</button>
+          <button id="deathQuitBtn" class="action-btn ghost" type="button">ABORT TO TITLE</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="victoryScreen" class="overlay is-hidden">
+      <div class="victory-flare"></div>
+      <div class="overlay-panel victory-panel">
+        <div class="panel-kicker">OPERATION COMPLETE</div>
+        <h2>IRON<br /><span>DAWN</span></h2>
+        <p>The city is free. The sun is coming up.<br />Sgt. Cole is still standing.</p>
+        <div class="victory-stats">
+          <div><span>FINAL SCORE</span><b id="victoryScore">000000</b></div>
+          <div><span>CONFIRMED KILLS</span><b id="victoryKills">0</b></div>
+          <div><span>CAMPAIGN TIME</span><b id="victoryTime">00:00</b></div>
+        </div>
+        <div class="victory-medal">★</div>
+        <div class="victory-actions">
+          <button id="campaignBtn" class="action-btn primary" type="button">DEPLOY AGAIN</button>
+          <button id="victoryQuitBtn" class="action-btn ghost" type="button">TITLE SCREEN</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="rotateHint" class="rotate-hint">
+      <span>↻</span>
+      <b>ROTATE YOUR DEVICE</b>
+      <small>Landscape is the recommended combat posture.</small>
+    </div>
+
+    <div id="touchControls" class="touch-controls" aria-hidden="true">
+      <div class="touch-move">
+        <button data-touch="left" class="touch-btn touch-left" type="button" aria-label="Move left">◀</button>
+        <button data-touch="right" class="touch-btn touch-right" type="button" aria-label="Move right">▶</button>
+      </div>
+      <div class="touch-actions">
+        <button data-touch="reload" class="touch-btn touch-small" type="button">R</button>
+        <button data-touch="grenade" class="touch-btn touch-small" type="button">G</button>
+        <button data-touch="knife" class="touch-btn touch-medium" type="button">KNIFE</button>
+        <button data-touch="jump" class="touch-btn touch-jump" type="button">JUMP</button>
+        <button data-touch="fire" class="touch-btn touch-fire" type="button">FIRE</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/game.js"></script>
+</body>
+</html>
