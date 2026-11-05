@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#05070f" />
+  <meta name="description" content="Starfall: Neon Siege — a fast neon wave-defense shooter. Survive ten waves and break the Void Tyrant." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23050812'/%3E%3Cpath d='M32 10 46 48 32 40 18 48Z' fill='%2346e8ff'/%3E%3Ccircle cx='32' cy='34' r='3' fill='%23ff3f9e'/%3E%3C/svg%3E" />
+  <title>STARFALL — Neon Siege</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <canvas id="game" aria-label="Starfall: Neon Siege playfield" tabindex="-1"></canvas>
+  <div id="vignette" aria-hidden="true"></div>
+
+  <div id="hud" class="hud is-hidden" aria-hidden="true">
+    <div class="hud-top">
+      <div class="stat-block">
+        <span class="stat-label">SCORE</span>
+        <span id="score" class="stat-value">0</span>
+        <span class="best-line">BEST <span id="hudBest">0</span></span>
+      </div>
+
+      <div class="wave-block">
+        <span id="waveLabel" class="wave-label">WAVE 1</span>
+        <span id="waveName" class="wave-name">FIRST CONTACT</span>
+        <div id="bossWrap" class="boss-wrap is-hidden">
+          <div class="boss-track"><div id="bossFill" class="boss-fill"></div></div>
+          <span id="bossName" class="boss-name">THE SENTINEL</span>
+        </div>
+      </div>
+
+      <div class="right-block">
+        <div class="meter-group">
+          <span class="meter-label">SHIELD</span>
+          <div id="shields" class="shields" aria-label="Shields"></div>
+        </div>
+        <div class="meter-group">
+          <span class="meter-label">PULSE</span>
+          <div id="bombs" class="bombs" aria-label="Pulse bombs"></div>
+        </div>
+        <div class="hud-buttons">
+          <button id="muteBtn" class="icon-btn" type="button" aria-label="Mute sound" title="Sound (M)">♪</button>
+          <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pause game" title="Pause (P)">❚❚</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-bottom">
+      <div id="powerups" class="powerups" aria-label="Active upgrades">
+        <div class="chip" data-power="rapid"><span>RAPID</span><i></i></div>
+        <div class="chip" data-power="spread"><span>SPREAD</span><i></i></div>
+        <div class="chip" data-power="power"><span>OVERDRIVE</span><i></i></div>
+      </div>
+      <div id="combo" class="combo is-hidden">x1</div>
+      <button id="bombBtn" class="bomb-btn" type="button" aria-label="Use pulse bomb">PULSE</button>
+    </div>
+
+    <div id="toast" class="toast" aria-live="polite">
+      <span id="toastKicker" class="toast-kicker"></span>
+      <span id="toastTitle" class="toast-title"></span>
+      <span id="toastSub" class="toast-sub"></span>
+    </div>
+
+    <div id="hint" class="hint">WASD / ARROWS — MOVE&nbsp;&nbsp;·&nbsp;&nbsp;SPACE — PULSE&nbsp;&nbsp;·&nbsp;&nbsp;P — PAUSE</div>
+  </div>
+
+  <div id="menu" class="overlay menu-overlay">
+    <div class="menu-inner">
+      <div class="sigil" aria-hidden="true">
+        <span class="sigil-ring r1"></span>
+        <span class="sigil-ring r2"></span>
+        <span class="sigil-ship"></span>
+      </div>
+      <p class="eyebrow"><span></span>DEEP SPACE DEFENSE PROTOCOL<span></span></p>
+      <h1 class="logo">STAR<span>FALL</span></h1>
+      <p class="logo-sub">NEON SIEGE</p>
+      <p class="tagline">Ten waves. Two titans. One last pilot.</p>
+      <button id="startBtn" class="btn primary" type="button">Start Game</button>
+      <div class="brief">
+        <div><b>MOVE</b><span>WASD / Arrows / Drag</span></div>
+        <div><b>FIRE</b><span>Automatic</span></div>
+        <div><b>PULSE</b><span>Space / Button</span></div>
+      </div>
+      <p class="menu-foot">BEST <span id="menuBest">0</span><span class="sep">·</span><span>SURVIVE ALL 10 WAVES</span></p>
+    </div>
+  </div>
+
+  <div id="pause" class="overlay is-hidden">
+    <div class="panel">
+      <p class="eyebrow"><span></span>RUN SUSPENDED<span></span></p>
+      <h2>PAUSED</h2>
+      <p class="tagline">Catch your breath, pilot.</p>
+      <div class="button-row">
+        <button id="resumeBtn" class="btn primary" type="button">Resume</button>
+        <button id="quitBtn" class="btn ghost" type="button">Abort Run</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gameover" class="overlay is-hidden">
+    <div class="panel">
+      <p class="eyebrow danger"><span></span>HULL BREACH<span></span></p>
+      <h2 class="danger">SIGNAL LOST</h2>
+      <p class="tagline">The swarm took the sector. For now.</p>
+      <div class="stats">
+        <div><span>SCORE</span><b id="goScore">0</b></div>
+        <div><span>WAVE</span><b id="goWave">1</b></div>
+        <div><span>KILLS</span><b id="goKills">0</b></div>
+      </div>
+      <p class="newbest is-hidden" id="goBest">NEW BEST</p>
+      <div class="button-row">
+        <button id="retryBtn" class="btn primary" type="button">Redeploy</button>
+        <button id="menuBtn" class="btn ghost" type="button">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="victory" class="overlay is-hidden">
+    <div class="panel">
+      <p class="eyebrow good"><span></span>SECTOR SECURED<span></span></p>
+      <h2 class="good">VOID BROKEN</h2>
+      <p class="tagline">The last titan falls. The stars are yours.</p>
+      <div class="stats">
+        <div><span>SCORE</span><b id="winScore">0</b></div>
+        <div><span>TIME</span><b id="winTime">0:00</b></div>
+        <div><span>KILLS</span><b id="winKills">0</b></div>
+      </div>
+      <p class="newbest is-hidden" id="winBest">NEW BEST</p>
+      <div class="button-row">
+        <button id="againBtn" class="btn primary" type="button">Play Again</button>
+        <button id="winMenuBtn" class="btn ghost" type="button">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./game.js" defer></script>
+</body>
+</html>
