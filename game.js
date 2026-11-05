@@ -86,7 +86,9 @@ const ui = {
   desktopHint: $("#desktopHint"),
   toast: $("#toast"),
   moveStick: $("#moveStick"),
-  aimStick: $("#aimStick")
+  aimStick: $("#aimStick"),
+  powerDock: $("#powerDock"),
+  powerBtns: Array.from(document.querySelectorAll("[data-power]"))
 };
 
 const ctx = ui.canvas.getContext("2d", { alpha: false, desynchronized: true });
@@ -112,7 +114,9 @@ const game = {
   spawnClock: 0,
   waveBreak: 0,
   waveState: "idle",
-  spawnQueue: []
+  spawnQueue: [],
+  powerFlash: 0,
+  powerColor: "#b7ff3e"
 };
 
 const player = {
@@ -133,7 +137,10 @@ const player = {
   flash: 0,
   recoil: 0,
   walk: 0,
-  alive: true
+  alive: true,
+  overdrive: 0,
+  adrenaline: 0,
+  powerCd: { onde: 0, rafale: 0, serum: 0 }
 };
 
 const attractPlayer = { x: WORLD.w / 2, y: WORLD.h / 2, aim: -Math.PI / 2, walk: 0 };
@@ -158,6 +165,31 @@ const ENEMY_TYPES = {
   runner: { hp: 23, r: 12, speed: 101, dmg: 6, score: 16, body: "#4b3a2b", skin: "#a18c65", eye: "#ffd15a" },
   brute: { hp: 165, r: 27, speed: 39, dmg: 21, score: 60, body: "#45312c", skin: "#93705e", eye: "#ff2d2d" }
 };
+
+const POWERS = {
+  onde: {
+    name: "ONDE DE CHOC",
+    key: "1",
+    cooldown: 20,
+    color: "#b7ff3e",
+    desc: "repousse et blesse la horde autour de vous"
+  },
+  rafale: {
+    name: "RAFALE",
+    key: "2",
+    cooldown: 26,
+    color: "#ffca57",
+    desc: "six secondes de tir frénétique sans consommer de munitions"
+  },
+  serum: {
+    name: "SÉRUM",
+    key: "3",
+    cooldown: 32,
+    color: "#78f57a",
+    desc: "rend 50 PV, deux secondes et demie d'immunité et un boost de vitesse"
+  }
+};
+const POWER_ORDER = ["onde", "rafale", "serum"];
 
 /* ----------------------------------------------------------------------- */
 /* Audio                                                                   */
@@ -285,6 +317,28 @@ const sound = (() => {
       tone(210, 52, 0.9, "sawtooth", 0.09);
       tone(105, 44, 1.2, "sine", 0.1, 0.16);
       burst(0.5, 0.08, 220, "lowpass", 0.1);
+    },
+    shock() {
+      if (!ensure()) return;
+      burst(0.34, 0.17, 240, "lowpass");
+      tone(130, 34, 0.46, "sawtooth", 0.12);
+      tone(65, 40, 0.55, "sine", 0.1, 0.04);
+    },
+    overdrive() {
+      if (!ensure()) return;
+      tone(180, 540, 0.16, "square", 0.06);
+      tone(260, 780, 0.22, "triangle", 0.05, 0.07);
+      burst(0.12, 0.05, 1800, "highpass", 0.04);
+    },
+    serum() {
+      if (!ensure()) return;
+      tone(420, 620, 0.14, "sine", 0.07);
+      tone(620, 880, 0.18, "sine", 0.05, 0.1);
+      tone(880, 1180, 0.24, "triangle", 0.04, 0.2);
+    },
+    deny() {
+      if (!ensure()) return;
+      tone(145, 112, 0.1, "square", 0.04);
     },
     click() {
       if (!ensure()) return;
@@ -414,6 +468,15 @@ window.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
     event.preventDefault();
     input.keys.add("fire");
+  }
+  const powerKey = {
+    Digit1: "onde", Numpad1: "onde",
+    Digit2: "rafale", Numpad2: "rafale",
+    Digit3: "serum", Numpad3: "serum"
+  }[event.code];
+  if (powerKey) {
+    event.preventDefault();
+    usePower(powerKey);
   }
   if (event.code === "KeyR") startReload();
   if (event.code === "Escape" || event.code === "KeyP") {
@@ -896,6 +959,9 @@ function resetPlayer() {
   player.recoil = 0;
   player.walk = 0;
   player.alive = true;
+  player.overdrive = 0;
+  player.adrenaline = 0;
+  for (const id of POWER_ORDER) player.powerCd[id] = 0;
 }
 
 function resetGame() {
@@ -919,6 +985,8 @@ function resetGame() {
   game.waveBreak = 0;
   game.waveState = "spawning";
   game.spawnQueue = [];
+  game.powerFlash = 0;
+  game.powerColor = "#b7ff3e";
   resetPlayer();
   resetFog();
   camera.x = player.x;
@@ -941,7 +1009,7 @@ function resetGame() {
     spawnZombie("walker", player.x + Math.cos(angle) * distance, player.y + Math.sin(angle) * distance);
   }
 
-  banner("VAGUE 01", "SURVIE", "ILS SONT DÉJÀ LÀ");
+  banner("VAGUE 01", "SURVIE", "ILS SONT DÉJÀ LÀ · POUVOIRS PRÊTS");
   sound.wave();
   updateHud(true);
   updateMotionUI();
@@ -1132,7 +1200,7 @@ function updateWave(dt) {
 /* ----------------------------------------------------------------------- */
 
 function startReload() {
-  if (game.mode !== "playing" || !player.alive) return;
+  if (game.mode !== "playing" || !player.alive || player.overdrive > 0) return;
   if (player.reloading || player.ammo >= player.mag) return;
   player.reloading = true;
   player.reloadT = player.reloadDur;
@@ -1140,12 +1208,164 @@ function startReload() {
   updateHud(true);
 }
 
+/* ----------------------------------------------------------------------- */
+/* Special powers                                                          */
+/* ----------------------------------------------------------------------- */
+
+function usePower(id) {
+  if (game.mode !== "playing" || !player.alive) return;
+  const spec = POWERS[id];
+  if (!spec) return;
+  const remaining = player.powerCd[id] || 0;
+  if (remaining > 0) {
+    toast(`${spec.name} — encore ${Math.ceil(remaining)} s.`);
+    sound.deny();
+    return;
+  }
+
+  player.powerCd[id] = spec.cooldown;
+  game.powerFlash = 0.45;
+  game.powerColor = spec.color;
+
+  if (id === "onde") activateShockwave();
+  else if (id === "rafale") activateOverdrive();
+  else if (id === "serum") activateSerum();
+
+  updateHud(true);
+}
+
+function activateShockwave() {
+  const radius = 290;
+  let hits = 0;
+  for (const zombie of enemies) {
+    if (zombie.dead) continue;
+    const dx = zombie.x - player.x;
+    const dy = zombie.y - player.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance > radius + zombie.r) continue;
+    const angle = Math.atan2(dy, dx);
+    const falloff = 1 - clamp(distance / radius, 0, 1) * 0.45;
+    damageZombie(zombie, (78 + game.wave * 3) * falloff, angle);
+    zombie.knockX += Math.cos(angle) * 300;
+    zombie.knockY += Math.sin(angle) * 300;
+    hits += 1;
+  }
+
+  for (let i = 0; i < 3; i += 1) {
+    spawnParticle({
+      type: "ring",
+      x: player.x,
+      y: player.y,
+      life: 0.45 + i * 0.1,
+      size: 10 + i * 12,
+      color: i === 0 ? "#e6ffb0" : "#b7ff3e",
+      reach: radius,
+      drag: 0
+    });
+  }
+  for (let i = 0; i < 22; i += 1) {
+    const angle = rand(0, TAU);
+    const speed = rand(90, 380);
+    spawnParticle({
+      type: "spark",
+      x: player.x + Math.cos(angle) * rand(10, 40),
+      y: player.y + Math.sin(angle) * rand(10, 40),
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: rand(0.16, 0.42),
+      size: rand(1, 2.6),
+      color: pick(["#e6ffb0", "#b7ff3e", "#ffca57"])
+    });
+  }
+  game.shake = Math.min(24, game.shake + 18);
+  addText(player.x, player.y - 38, "ONDE DE CHOC", "#d8ffa0", 14);
+  if (hits > 0) addText(player.x, player.y - 56, `${hits} HOSTILE${hits > 1 ? "S" : ""} REPOUSSÉ${hits > 1 ? "S" : ""}`, "#b7ff3e", 9);
+  sound.shock();
+}
+
+function activateOverdrive() {
+  player.overdrive = 6;
+  player.ammo = player.mag;
+  player.reloading = false;
+  player.reloadT = 0;
+  player.fireCd = 0;
+
+  for (let i = 0; i < 2; i += 1) {
+    spawnParticle({
+      type: "ring",
+      x: player.x,
+      y: player.y,
+      life: 0.5 + i * 0.12,
+      size: 12,
+      color: i === 0 ? "#fff2b0" : "#ffca57",
+      reach: 120,
+      drag: 0
+    });
+  }
+  for (let i = 0; i < 18; i += 1) {
+    spawnParticle({
+      type: "spark",
+      x: player.x + rand(-14, 14),
+      y: player.y + rand(-14, 14),
+      vx: rand(-130, 130),
+      vy: rand(-190, 40),
+      life: rand(0.2, 0.5),
+      size: rand(1, 2.4),
+      color: pick(["#fff2b0", "#ffca57", "#ff9f2e"])
+    });
+  }
+  game.shake = Math.min(16, game.shake + 8);
+  addText(player.x, player.y - 38, "RAFALE", "#ffca57", 15);
+  addText(player.x, player.y - 56, "6 S · MUNITIONS ILLIMITÉES", "#ffe6a0", 9);
+  sound.overdrive();
+  toast("Rafale : six secondes de tir frénétique.");
+}
+
+function activateSerum() {
+  const before = player.hp;
+  player.hp = Math.min(player.maxHp, player.hp + 50);
+  player.invuln = Math.max(player.invuln, 2.6);
+  player.adrenaline = 6;
+  const healed = Math.round(player.hp - before);
+
+  for (let i = 0; i < 2; i += 1) {
+    spawnParticle({
+      type: "ring",
+      x: player.x,
+      y: player.y,
+      life: 0.55 + i * 0.12,
+      size: 10,
+      color: i === 0 ? "#d6ffd6" : "#78f57a",
+      reach: 105,
+      drag: 0
+    });
+  }
+  for (let i = 0; i < 16; i += 1) {
+    const angle = rand(0, TAU);
+    spawnParticle({
+      type: "spark",
+      x: player.x + Math.cos(angle) * rand(4, 20),
+      y: player.y + Math.sin(angle) * rand(4, 20),
+      vx: Math.cos(angle) * rand(30, 110),
+      vy: Math.sin(angle) * rand(30, 110) - 50,
+      life: rand(0.3, 0.7),
+      size: rand(1, 2.2),
+      color: pick(["#d6ffd6", "#78f57a", "#b7ff3e"])
+    });
+  }
+  addText(player.x, player.y - 38, healed > 0 ? `+${healed} PV` : "SÉRUM", "#78f57a", 14);
+  addText(player.x, player.y - 56, "IMMUNITÉ · VITESSE", "#b7ff3e", 9);
+  sound.serum();
+  toast("Sérum : soins, immunité et vitesse accrue.");
+}
+
 function shoot() {
-  player.ammo -= 1;
-  player.fireCd = 0.102;
+  const rapid = player.overdrive > 0;
+  if (!rapid) player.ammo -= 1;
+  player.fireCd = rapid ? 0.056 : 0.102;
   player.recoil = Math.min(1, player.recoil + 0.34);
   player.flash = 0.06;
-  const spread = 0.012 + player.recoil * 0.03;
+  const spread = rapid ? 0.006 + player.recoil * 0.014 : 0.012 + player.recoil * 0.03;
   const angle = player.aim + rand(-spread, spread);
   const muzzleX = player.x + Math.cos(angle) * 34;
   const muzzleY = player.y + Math.sin(angle) * 34;
@@ -1192,13 +1412,18 @@ function shoot() {
     life: 0.9
   });
   sound.shoot();
-  if (player.ammo <= 0) startReload();
+  if (!rapid && player.ammo <= 0) startReload();
 }
 
 function updatePlayer(dt) {
   player.invuln = Math.max(0, player.invuln - dt);
   player.flash = Math.max(0, player.flash - dt);
   player.recoil = Math.max(0, player.recoil - dt * 4.8);
+  player.overdrive = Math.max(0, player.overdrive - dt);
+  player.adrenaline = Math.max(0, player.adrenaline - dt);
+  for (const id of POWER_ORDER) {
+    player.powerCd[id] = Math.max(0, player.powerCd[id] - dt);
+  }
 
   let mx = 0;
   let my = 0;
@@ -1213,9 +1438,10 @@ function updatePlayer(dt) {
     mx /= length;
     my /= length;
   }
-  player.x = clamp(player.x + mx * player.speed * dt, 25, WORLD.w - 25);
-  player.y = clamp(player.y + my * player.speed * dt, 25, WORLD.h - 25);
-  player.walk += Math.hypot(mx, my) * dt * 9;
+  const speedBoost = player.adrenaline > 0 ? 1.32 : 1;
+  player.x = clamp(player.x + mx * player.speed * speedBoost * dt, 25, WORLD.w - 25);
+  player.y = clamp(player.y + my * player.speed * speedBoost * dt, 25, WORLD.h - 25);
+  player.walk += Math.hypot(mx, my) * dt * 9 * speedBoost;
 
   const usingStick = input.aimStick.mag > 0.16;
   if (usingStick) {
@@ -1237,7 +1463,7 @@ function updatePlayer(dt) {
   player.fireCd = Math.max(0, player.fireCd - dt);
 
   if (player.reloading) {
-    player.reloadT -= dt;
+    player.reloadT -= dt * (player.adrenaline > 0 ? 1.45 : 1);
     if (player.reloadT <= 0) {
       player.reloading = false;
       player.reloadT = 0;
@@ -1248,7 +1474,9 @@ function updatePlayer(dt) {
   }
 
   if (wantFire && !player.reloading) {
-    if (player.ammo <= 0) startReload();
+    if (player.overdrive > 0) {
+      if (player.fireCd <= 0) shoot();
+    } else if (player.ammo <= 0) startReload();
     else if (player.fireCd <= 0) shoot();
   }
 }
@@ -1496,7 +1724,8 @@ function spawnParticle(options) {
     color: options.color || "#fff",
     type: options.type || "dot",
     drag: options.drag ?? 2.8,
-    grow: options.grow || 0
+    grow: options.grow || 0,
+    reach: options.reach || 34
   });
 }
 
@@ -1970,6 +2199,35 @@ function drawPlayer(entity, isReal) {
   ctx.beginPath();
   ctx.ellipse(0, 5, 18, 10, 0, 0, TAU);
   ctx.fill();
+
+  if (isReal && (player.overdrive > 0 || player.adrenaline > 0)) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    if (player.overdrive > 0) {
+      const pulse = 0.55 + Math.sin(game.time * 16) * 0.18;
+      ctx.strokeStyle = `rgba(255, 190, 60, ${pulse})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 27 + Math.sin(game.time * 12) * 2.2, 0, TAU);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255, 120, 30, 0.28)";
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(0, 0, 30, 0, TAU);
+      ctx.stroke();
+    }
+    if (player.adrenaline > 0) {
+      ctx.strokeStyle = "rgba(120, 245, 122, 0.5)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 5]);
+      ctx.beginPath();
+      ctx.arc(0, 0, 31 + Math.sin(game.time * 7) * 1.6, 0, TAU);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+
   if (isReal) {
     ctx.strokeStyle = "rgba(183, 255, 62, 0.28)";
     ctx.lineWidth = 1.1;
@@ -2116,7 +2374,7 @@ function drawParticles() {
       ctx.strokeStyle = particle.color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(particle.x, particle.y, particle.size + (1 - opacity) * 34, 0, TAU);
+      ctx.arc(particle.x, particle.y, particle.size + (1 - opacity) * (particle.reach || 34), 0, TAU);
       ctx.stroke();
     } else {
       ctx.globalCompositeOperation = "source-over";
@@ -2225,6 +2483,15 @@ function drawScreenEffects(width, height) {
       ctx.restore();
     }
   }
+
+  if (game.powerFlash > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = game.powerFlash * 0.16;
+    ctx.fillStyle = game.powerColor;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+  }
 }
 
 /* ----------------------------------------------------------------------- */
@@ -2263,15 +2530,18 @@ function updateHud(force = false) {
     hudCache.hp = hp;
   }
 
-  const ammoKey = `${player.ammo}/${player.mag}/${player.reloading}/${player.reloadT.toFixed(1)}`;
+  const overdrive = player.overdrive > 0;
+  const ammoKey = `${player.ammo}/${player.mag}/${player.reloading}/${player.reloadT.toFixed(1)}/${overdrive}/${overdrive ? Math.ceil(player.overdrive) : 0}`;
   if (force || hudCache.ammo !== ammoKey) {
-    ui.ammoText.textContent = player.reloading ? "RECHARGE" : `${player.ammo} / ${player.mag}`;
-    ui.ammoFill.style.transform = `scaleX(${clamp(player.ammo / player.mag, 0, 1)})`;
+    ui.ammoText.textContent = overdrive ? "∞" : player.reloading ? "RECHARGE" : `${player.ammo} / ${player.mag}`;
+    ui.ammoFill.style.transform = `scaleX(${overdrive ? 1 : clamp(player.ammo / player.mag, 0, 1)})`;
     ui.reloadFill.style.transform = `scaleX(${player.reloading ? clamp(1 - player.reloadT / player.reloadDur, 0, 1) : 0})`;
-    ui.reloadBtn.classList.toggle("reloading", player.reloading);
-    ui.reloadBtn.classList.toggle("ready", !player.reloading && player.ammo === 0);
-    ui.reloadText.textContent = player.reloading ? "RECHARGE" : "RECHARGER";
-    ui.ammoLabel.textContent = player.reloading ? "RECHARGE EN COURS" : "CHARGEUR";
+    ui.reloadBtn.classList.toggle("reloading", player.reloading && !overdrive);
+    ui.reloadBtn.classList.toggle("ready", !overdrive && !player.reloading && player.ammo === 0);
+    ui.reloadText.textContent = overdrive ? "RAFALE" : player.reloading ? "RECHARGE" : "RECHARGER";
+    ui.ammoLabel.textContent = overdrive
+      ? `RAFALE · ${Math.ceil(player.overdrive)} S`
+      : player.reloading ? "RECHARGE EN COURS" : "CHARGEUR";
     hudCache.ammo = ammoKey;
   }
 
@@ -2287,6 +2557,47 @@ function updateHud(force = false) {
   }
 
   ui.tiltBadge.classList.toggle("hidden", !input.tilt.enabled || game.mode !== "playing");
+  updatePowerHud(force);
+}
+
+const powerCache = { key: null };
+
+function updatePowerHud(force = false) {
+  const key = `${game.mode}|${POWER_ORDER.map((id) => `${id}:${player.powerCd[id].toFixed(1)}`).join("|")}|${Math.ceil(player.overdrive)}|${Math.ceil(player.adrenaline)}`;
+  if (!force && powerCache.key === key) return;
+  powerCache.key = key;
+
+  for (const button of ui.powerBtns) {
+    const id = button.dataset.power;
+    const spec = POWERS[id];
+    if (!spec) continue;
+    const cooldown = player.powerCd[id] || 0;
+    const active = (id === "rafale" && player.overdrive > 0)
+      || (id === "serum" && player.adrenaline > 0);
+    const ready = cooldown <= 0 && game.mode === "playing" && player.alive;
+    button.classList.toggle("is-ready", ready);
+    button.classList.toggle("is-cooling", cooldown > 0);
+    button.classList.toggle("is-active", active);
+
+    const cdBar = button.querySelector(".power-cd");
+    if (cdBar) cdBar.style.transform = `scaleY(${clamp(cooldown / spec.cooldown, 0, 1)})`;
+
+    const timer = button.querySelector(".power-timer");
+    if (timer) {
+      if (active) timer.textContent = `${Math.ceil(id === "rafale" ? player.overdrive : player.adrenaline)}s`;
+      else if (cooldown > 0) timer.textContent = String(Math.ceil(cooldown));
+      else timer.textContent = spec.key;
+    }
+
+    button.setAttribute(
+      "aria-label",
+      active
+        ? `${spec.name}, actif`
+        : cooldown > 0
+          ? `${spec.name}, recharge ${Math.ceil(cooldown)} secondes`
+          : `${spec.name}, prêt. ${spec.desc}`
+    );
+  }
 }
 
 function updateBestUI() {
@@ -2322,6 +2633,7 @@ function update(dt) {
   game.time += dt;
   game.shake = Math.max(0, game.shake - dt * 34);
   game.hitFlash = Math.max(0, game.hitFlash - dt * 2.8);
+  game.powerFlash = Math.max(0, game.powerFlash - dt * 2.6);
   updateParticles(dt);
   updateFog(dt);
   updateCamera(dt);
@@ -2407,6 +2719,12 @@ ui.pauseMenuBtn.addEventListener("click", () => {
 
 ui.backMenuBtn.addEventListener("click", backToMenu);
 ui.reloadBtn.addEventListener("click", startReload);
+for (const button of ui.powerBtns) {
+  button.addEventListener("click", () => {
+    sound.unlock();
+    usePower(button.dataset.power);
+  });
+}
 ui.motionBtn.addEventListener("click", toggleMotion);
 ui.calibrateBtn.addEventListener("click", calibrateMotion);
 ui.soundBtn.addEventListener("click", toggleSound);

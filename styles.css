@@ -418,12 +418,189 @@ button:focus-visible {
   transform: rotate(40deg);
 }
 
+/* ------------------------------- POWERS -------------------------------- */
+
+.power-dock {
+  position: absolute;
+  right: var(--safe-right);
+  bottom: calc(var(--safe-bottom) + 84px);
+  z-index: 6;
+  display: flex;
+  gap: 7px;
+  pointer-events: auto;
+}
+
+body.is-touch .power-dock {
+  bottom: calc(var(--safe-bottom) + var(--stick-size) + 104px);
+}
+
+.power-btn {
+  --pw: var(--acid);
+  --pw-line: rgba(183, 255, 62, 0.35);
+  position: relative;
+  width: 58px;
+  height: 56px;
+  padding: 7px 4px 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(232, 241, 223, 0.15);
+  background: linear-gradient(180deg, rgba(13, 22, 15, 0.9), rgba(6, 10, 7, 0.88));
+  color: rgba(141, 156, 141, 0.8);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  transition: color 0.18s, border-color 0.18s, transform 0.1s, background 0.18s;
+  touch-action: manipulation;
+}
+
+.power-btn[data-power="rafale"] {
+  --pw: var(--amber);
+  --pw-line: rgba(255, 202, 87, 0.38);
+}
+
+.power-btn[data-power="serum"] {
+  --pw: #78f57a;
+  --pw-line: rgba(120, 245, 122, 0.36);
+}
+
+.power-btn:active {
+  transform: scale(0.94);
+}
+
+.power-btn.is-ready {
+  color: var(--pw);
+  border-color: var(--pw-line);
+  background: linear-gradient(180deg, rgba(21, 33, 22, 0.94), rgba(7, 12, 8, 0.9));
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35), inset 0 0 18px rgba(183, 255, 62, 0.05);
+}
+
+.power-btn.is-active {
+  color: var(--pw);
+  border-color: var(--pw);
+  animation: power-active 0.85s ease-in-out infinite;
+}
+
+@keyframes power-active {
+  0%, 100% { box-shadow: 0 0 0 rgba(255, 202, 87, 0); }
+  50% { box-shadow: 0 0 20px rgba(255, 202, 87, 0.32); }
+}
+
+.power-icon,
+.power-name,
+.power-timer {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.power-icon {
+  display: block;
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+}
+
+.power-icon-shock {
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.power-icon-shock::before,
+.power-icon-shock::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+}
+
+.power-icon-shock::before {
+  inset: 3.5px;
+  border: 1px solid currentColor;
+  opacity: 0.7;
+}
+
+.power-icon-shock::after {
+  inset: 7px;
+  background: currentColor;
+}
+
+.power-icon-rafale::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 3px;
+  height: 15px;
+  border-radius: 1px;
+  background: currentColor;
+  box-shadow: 6px 0 0 currentColor, 12px 0 0 currentColor;
+  transform: skewX(-18deg);
+}
+
+.power-icon-serum::before,
+.power-icon-serum::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: currentColor;
+  border-radius: 1px;
+  transform: translate(-50%, -50%);
+}
+
+.power-icon-serum::before {
+  width: 5px;
+  height: 17px;
+}
+
+.power-icon-serum::after {
+  width: 17px;
+  height: 5px;
+}
+
+.power-name {
+  font-size: 6.5px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+.power-timer {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  z-index: 2;
+  font-family: "Arial Black", Impact, system-ui, sans-serif;
+  font-size: 7px;
+  line-height: 1;
+  color: rgba(232, 241, 223, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+
+.power-btn.is-cooling .power-timer {
+  color: var(--paper);
+}
+
+.power-cd {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  background: rgba(3, 7, 4, 0.74);
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  transition: transform 0.12s linear;
+  pointer-events: none;
+}
+
 body.is-touch .hud-bottom {
   bottom: calc(var(--safe-bottom) + var(--stick-size) + 28px);
 }
 
 body.is-touch .toast {
-  bottom: calc(var(--safe-bottom) + var(--stick-size) + 72px);
+  bottom: calc(var(--safe-bottom) + var(--stick-size) + 172px);
 }
 
 .wave-banner {
@@ -632,10 +809,15 @@ body.is-touch .stick {
   flex-direction: column;
   justify-content: space-between;
   overflow-y: auto;
+  scrollbar-width: none;
   padding: var(--safe-top) var(--safe-left) var(--safe-bottom) var(--safe-right);
   background:
     radial-gradient(ellipse 70% 55% at 50% 42%, rgba(9, 21, 12, 0.35), rgba(4, 7, 5, 0.88) 75%),
     linear-gradient(180deg, rgba(3, 6, 4, 0.78), rgba(3, 6, 4, 0.4) 38%, rgba(3, 6, 4, 0.92));
+}
+
+.menu::-webkit-scrollbar {
+  display: none;
 }
 
 .menu::before {
@@ -1292,6 +1474,14 @@ body.is-touch .stick {
 
   .hud-bottom {
     bottom: calc(var(--safe-bottom) + 2px);
+  }
+
+  body.is-touch .power-dock {
+    bottom: calc(var(--safe-bottom) + var(--stick-size) + 34px);
+  }
+
+  body.is-touch .toast {
+    bottom: calc(var(--safe-bottom) + var(--stick-size) + 114px);
   }
 
   .wave-banner {
