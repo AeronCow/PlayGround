@@ -276,7 +276,6 @@ export function createLevels() {
       hazards: [
         { type: 'fire', x: 900, y: 548, w: 46, h: 72, damage: 14, interval: 0.5 },
         { type: 'fire', x: 2320, y: 548, w: 46, h: 72, damage: 14, interval: 0.5 },
-        { type: 'fire', x: 3900, y: 548, w: 46, h: 72, damage: 14, interval: 0.5 },
         { type: 'fire', x: 3900, y: 548, w: 46, h: 72, damage: 14, interval: 0.5 }
       ],
       decorations: [
